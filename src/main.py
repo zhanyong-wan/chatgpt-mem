@@ -78,8 +78,8 @@ def main():
             f"Found {len(memories)} memories matching '{query}'{time_range_str}.",
             file=sys.stderr,
         )
-        for mem_id, score, memory in memories:
-            print(f"{mem_id} ({score}) {memory}")
+        for score, memory in memories:
+            print(f"{memory.time} ({score}) {memory.text}")
         return
 
 

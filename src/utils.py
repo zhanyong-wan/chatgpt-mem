@@ -32,6 +32,17 @@ PINECONE_INDEX_METADATA_KEY_MEMORY_TIME = "time"
 PINECONE_INDEX_METADATA_KEY_MEMORY_TEXT = "memory"
 
 
+class Memory:
+    """A memory stored in the PineCone index."""
+
+    def __init__(self, time: datetime, text: str) -> None:
+        self.time = time
+        self.text = text
+
+    def __repr__(self) -> str:
+        return f"Memory(time={self.time}, text={self.text})"
+
+
 def init_environment(verbose: bool = False) -> None:
     """Initializes the environment for working with the OpenAI API and PineCone API."""
 
@@ -96,7 +107,20 @@ def string_to_timestamp_in_microseconds(string: str) -> int:
         The timestamp in microseconds.
     """
 
-    return int(datetime.strptime(string, "%Y-%m-%d %H:%M:%S.%f").timestamp() * 1e6)
+    return int(string_to_datetime(string).timestamp() * 1e6)
+
+
+def string_to_datetime(string: str) -> datetime:
+    """Converts a time string to its datetime.
+
+    Args:
+        string: The string to convert, in the format "YYYY-MM-DD hh:mm:ss.xxxxxx".
+
+    Returns:
+        The datetime.
+    """
+
+    return datetime.strptime(string, "%Y-%m-%d %H:%M:%S.%f")
 
 
 def update_memory(id: str, memory: str) -> None:
@@ -152,7 +176,7 @@ def add_memory(memory: str, utc_time: datetime = datetime.utcnow()) -> str:
 
 def query_memory(
     query: str, start_time: str = "", end_time: str = "", top_k=10
-) -> List[Tuple[str, float, str]]:
+) -> List[Tuple[float, Memory]]:
     """Queries the PineCone index for matching memories.
 
     Args:
@@ -162,7 +186,7 @@ def query_memory(
         top_k: The number of matching memories to return.
 
     Returns:
-        A list of matching memories (ID, score, content), sorted by relevance (high to low).
+        A list of matching memories (score, memory), sorted by relevance score (high to low).
     """
 
     index = pinecone.Index(PINECONE_INDEX)
@@ -199,9 +223,11 @@ def query_memory(
     for item in result["matches"]:
         memories.append(
             (
-                item["id"],
                 item["score"],
-                item["metadata"][PINECONE_INDEX_METADATA_KEY_MEMORY_TEXT],
+                Memory(
+                    time=string_to_datetime(item["id"]),
+                    text=item["metadata"][PINECONE_INDEX_METADATA_KEY_MEMORY_TEXT],
+                ),
             )
         )
     return memories
