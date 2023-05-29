@@ -26,6 +26,8 @@ PINECONE_INDEX_DIMENSION = OPENAI_GPT_EMBEDDING_DIMENSION
 PINECONE_INDEX_METRIC = "cosine"
 # All memories will be stored in this namespace.
 PINECONE_INDEX_NAMESPACE = "memories"
+# Key for storing the memory time.
+PINECONE_INDEX_METADATA_KEY_MEMORY_TIME = "time"
 # Key for storing the memory text.
 PINECONE_INDEX_METADATA_KEY_MEMORY_TEXT = "memory"
 
@@ -100,8 +102,11 @@ def update_memory(id: str, memory: str) -> None:
             (
                 id,  # Vector ID
                 embedding,  # Dense vector
-                # Store the memory text in the vector metadata.
-                {PINECONE_INDEX_METADATA_KEY_MEMORY_TEXT: memory},
+                # Store the memory time and text in the vector metadata.
+                {
+                    PINECONE_INDEX_METADATA_KEY_MEMORY_TIME: id,
+                    PINECONE_INDEX_METADATA_KEY_MEMORY_TEXT: memory,
+                },
             ),
         ],
         namespace=PINECONE_INDEX_NAMESPACE,
