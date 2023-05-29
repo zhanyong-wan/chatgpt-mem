@@ -144,17 +144,19 @@ def string_to_datetime(string: str) -> datetime:
         return datetime.strptime(string, _OLD_DATETIME_FORMAT)
 
 
-def update_memory(id: str, memory: str) -> None:
+def update_memory(id: str, memory: str, verbose: bool = False) -> None:
     """Upserts a memory into the PineCone index.
 
     Args:
         id: The memory ID.
         memory: The memory text.
+        verbose: Whether to print verbose information.
     """
 
     index = pinecone.Index(PINECONE_INDEX)
     embedding = to_embedding(memory)
-    print(f"Embedding = {embedding[:10]} + ...", file=sys.stderr)
+    if verbose:
+        print(f"Embedding = {embedding[:10]} + ...", file=sys.stderr)
     index.upsert(
         vectors=[
             (
@@ -175,7 +177,7 @@ def update_memory(id: str, memory: str) -> None:
     )
 
 
-def add_memory(memory: str, utc_time: datetime = datetime.utcnow()) -> str:
+def add_memory(memory: str, utc_time: Optional[datetime] = None) -> str:
     """Inserts a memory into the Pinecone index.
 
     Memories are keyed by the timestamp of the memory.
@@ -187,6 +189,12 @@ def add_memory(memory: str, utc_time: datetime = datetime.utcnow()) -> str:
     Returns:
         The memory timestamp.
     """
+
+    # Default the timestamp to now.  We cannot set the default value in the function
+    # declaration, as that will be evaluated only once (as opposed to every time we
+    # call the function).
+    if not utc_time:
+        utc_time = datetime.utcnow()
 
     # Identify memories via microsecond-level timestamps.
     # E.g. 2023-05-10T20:02:28.328142
@@ -331,12 +339,14 @@ def _make_messages(conversation: List[str]) -> List[Dict[str, str]]:
         role = "assistant" if role == "user" else "user"
 
     # Set the behavior of the bot.
-    reverse_messages.append({"role": "system", "content": "You are a helpful assistant."})
+    reverse_messages.append(
+        {"role": "system", "content": "You are a helpful assistant."}
+    )
     return list(reversed(reverse_messages))
 
 
-def chat_without_memory() -> None:
-    """Chats with GPT without external memory."""
+def chat() -> None:
+    """Chats with GPT, saving the history to external memory."""
 
     print("Type 'quit' to exit.", file=sys.stderr)
     conversation: List[str] = []  # Conversation history so far.
@@ -348,11 +358,13 @@ def chat_without_memory() -> None:
             break
 
         conversation.append(text)
+        add_memory(f"I said: ```{text}```")
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=_make_messages(conversation),
         )
 
-        answer = response["choices"][0]["message"]["content"]  # type: ignore
+        answer = response["choices"][0]["message"]["content"].strip()  # type: ignore
         print(f"{answer}", file=sys.stderr)
         conversation.append(answer)
+        add_memory(f"GPT said: ```{answer}```")

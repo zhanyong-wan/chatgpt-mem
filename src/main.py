@@ -95,7 +95,7 @@ def main():
         return
 
     if command == "chat":
-        utils.chat_without_memory()
+        utils.chat()
         return
 
     sys.exit(f"Unknown command {command}.")
