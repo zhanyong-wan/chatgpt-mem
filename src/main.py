@@ -6,6 +6,18 @@ USAGE:
 
     src/main.py init
         Initialilzes the environment.
+
+    src/main.py embed <text>
+        Prints the embedding of <text>.
+
+    src/main.py add <text>
+        Adds <text> with the current timestamp as its ID to the memory.
+
+    src/main.py update <id> <text>
+        Updates the memory with id <id> to <text>.
+    
+    src/main.py query <query>
+        Finds the memories most relevant to <query>.
 """
 
 import sys
