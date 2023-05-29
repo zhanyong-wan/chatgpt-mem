@@ -46,6 +46,14 @@ def main():
         print(f"Updated memory {mem_id} with new content '{text}'.", file=sys.stderr)
         return
 
+    if command == "query":
+        query = args[1]
+        memories = utils.query_memory(query)
+        print(f"Found {len(memories)} memories matching '{query}':", file=sys.stderr)
+        for mem_id, score, memory in memories:
+            print(f"{mem_id} ({score}) {memory}")
+        return
+
 
 if __name__ == "__main__":
     main()

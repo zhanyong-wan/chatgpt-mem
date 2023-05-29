@@ -6,7 +6,7 @@ References:
 """
 
 from datetime import datetime
-from typing import List
+from typing import List, Tuple
 import api_secrets
 import openai
 import pinecone
@@ -123,3 +123,33 @@ def add_memory(memory: str, utc_time: datetime = datetime.utcnow()) -> str:
     id = f"{utc_time}"
     update_memory(id, memory)
     return id
+
+
+def query_memory(query: str) -> List[Tuple[str, float, str]]:
+    """Queries the PineCone index for matching memories.
+
+    Args:
+        query: The query text.
+
+    Returns:
+        A list of matching memory (ID, score, content), sorted by relevance (high to low).
+    """
+
+    index = pinecone.Index(PINECONE_INDEX)
+    result = index.query(
+        namespace=PINECONE_INDEX_NAMESPACE,
+        vector=to_embedding(query),
+        top_k=10,
+        include_values=False,
+        include_metadata=True,
+    )
+    memories = []
+    for item in result["matches"]:
+        memories.append(
+            (
+                item["id"],
+                item["score"],
+                item["metadata"][PINECONE_INDEX_METADATA_KEY_MEMORY_TEXT],
+            )
+        )
+    return memories
