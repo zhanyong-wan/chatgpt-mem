@@ -35,12 +35,13 @@ PINECONE_INDEX_METADATA_KEY_MEMORY_TEXT = "memory"
 class Memory:
     """A memory stored in the PineCone index."""
 
-    def __init__(self, time: datetime, text: str) -> None:
+    def __init__(self, id: str, time: datetime, text: str) -> None:
+        self.id = id
         self.time = time
         self.text = text
 
     def __repr__(self) -> str:
-        return f"Memory(time={self.time}, text={self.text})"
+        return f"Memory(id={self.id}, time={datetime_to_string(self.time)}, text={self.text})"
 
 
 def init_environment(verbose: bool = False) -> None:
@@ -97,6 +98,23 @@ def to_embedding(text: str) -> List[float]:
     return embedding
 
 
+_DATETIME_FORMAT = "%Y-%m-%dT%H:%M:%S.%f"
+_OLD_DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S.%f"
+
+
+def datetime_to_string(dt: datetime) -> str:
+    """Converts a datetime to its string representation.
+
+    Args:
+        dt: The datetime.
+
+    Returns:
+        The string representation in the format of "YYYY-MM-DDThh:mm:ss.xxxxxx".
+    """
+
+    return dt.strftime(_DATETIME_FORMAT)
+
+
 def string_to_timestamp_in_microseconds(string: str) -> int:
     """Converts a time string to its timestamp in microseconds.
 
@@ -114,13 +132,16 @@ def string_to_datetime(string: str) -> datetime:
     """Converts a time string to its datetime.
 
     Args:
-        string: The string to convert, in the format "YYYY-MM-DD hh:mm:ss.xxxxxx".
+        string: The string to convert, in the format "YYYY-MM-DDThh:mm:ss.xxxxxx".
 
     Returns:
         The datetime.
     """
 
-    return datetime.strptime(string, "%Y-%m-%d %H:%M:%S.%f")
+    try:
+        return datetime.strptime(string, _DATETIME_FORMAT)
+    except ValueError as e:
+        return datetime.strptime(string, _OLD_DATETIME_FORMAT)
 
 
 def update_memory(id: str, memory: str) -> None:
@@ -168,8 +189,8 @@ def add_memory(memory: str, utc_time: datetime = datetime.utcnow()) -> str:
     """
 
     # Identify memories via microsecond-level timestamps.
-    # E.g. 2023-05-10 20:02:28.328142
-    id = f"{utc_time}"
+    # E.g. 2023-05-10T20:02:28.328142
+    id = datetime_to_string(utc_time)
     update_memory(id, memory)
     return id
 
@@ -221,13 +242,47 @@ def query_memory(
     )
     memories = []
     for item in result["matches"]:
+        id = item["id"]
         memories.append(
             (
                 item["score"],
                 Memory(
-                    time=string_to_datetime(item["id"]),
+                    id=id,
+                    time=string_to_datetime(id),
                     text=item["metadata"][PINECONE_INDEX_METADATA_KEY_MEMORY_TEXT],
                 ),
+            )
+        )
+    return memories
+
+
+def get_memories(ids: List[str]) -> List[Memory]:
+    """Gets the memories with the given IDs.
+
+    Args:
+        ids: The list of IDs.
+
+    Returns:
+        The list of matching memories.
+    """
+
+    index = pinecone.Index(PINECONE_INDEX)
+    for id in ids:
+        assert (
+            " " not in id
+        ), f"ID '{id}' contains spaces, which is not allowed by fetch()."
+    result = index.fetch(namespace=PINECONE_INDEX_NAMESPACE, ids=ids)
+    # vectors is a map from ID to value.  Each mapped value looks like
+    #   {'id': ID, 'metadata': {'time': TIME, 'memory': TEXT}, 'values': [...]}
+    vectors = result["vectors"]
+    memories = []
+    for id in ids:
+        item = vectors[id]
+        memories.append(
+            Memory(
+                id=id,
+                time=string_to_datetime(id),
+                text=item["metadata"][PINECONE_INDEX_METADATA_KEY_MEMORY_TEXT],
             )
         )
     return memories

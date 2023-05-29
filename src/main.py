@@ -20,8 +20,8 @@ USAGE:
         Finds the memories most relevant to <query>.  If <start-time> is given,
         include only memories that were added at or after <start-time>.  If
         <end-time> is given, include only memories that were added before<end-time>.
-        The time format is "YYYY-MM-DD hh:mm:ss.xxxxxx" in UTC, e.g.
-        "2021-01-01 12:34:56.123456".
+        The time format is "YYYY-MM-DDThh:mm:ss.xxxxxx" in UTC, e.g.
+        "2021-01-01T12:34:56.123456".
 """
 
 import sys
@@ -79,7 +79,13 @@ def main():
             file=sys.stderr,
         )
         for score, memory in memories:
-            print(f"{memory.time} ({score}) {memory.text}")
+            print(f"{memory.id} ({score}) {memory.text}")
+        return
+
+    if command == "get":
+        mem_id = args[1]
+        memory = utils.get_memories(ids=[mem_id])[0]
+        print(f"Memory {mem_id}: {memory.text}")
         return
 
 
