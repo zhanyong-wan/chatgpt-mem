@@ -91,9 +91,7 @@ def init_environment(verbose: bool = False) -> None:
 def to_embedding(text: str) -> List[float]:
     """Converts the text to its embedding vector using OpenAI API."""
 
-    result = openai.Embedding.create(
-        input=[text], model=OPENAI_TEXT_EMBEDDING_MODEL
-    )
+    result = openai.Embedding.create(input=[text], model=OPENAI_TEXT_EMBEDDING_MODEL)
     data = result["data"]  # type: ignore
     embedding = data[0]["embedding"]
     assert len(embedding) == OPENAI_GPT_EMBEDDING_DIMENSION
@@ -298,3 +296,57 @@ def delete_memories(ids: List[str]) -> None:
 
     index = pinecone.Index(PINECONE_INDEX)
     index.delete(namespace=PINECONE_INDEX_NAMESPACE, ids=ids)
+
+
+def _make_messages(conversation: List[str]) -> List[Dict[str, str]]:
+    """Makes the messages to send to GPT.
+
+    Args:
+        conversation: The conversation history.  It contains alternating text
+        spoken by the user and the bot.  The length should always be odd.
+        The last element should be the user's last message.
+
+    Returns:
+        The messages to send to GPT.
+    """
+
+    assert (
+        len(conversation) % 2 == 1
+    ), "The conversation history should have an odd length."
+
+    # Generate the messages in reverse order, as we need to discard early conversation
+    # when the total length exceeds the history window size.
+    reverse_messages: List[Dict[str, str]] = []
+    role = "user"  # user or assistant.
+    for text in reversed(conversation):
+        # In Python, it's more efficient to append to a list than to insert at the beginning.
+        reverse_messages.append({"role": role, "content": text})
+        # Reverse the role.
+        role = "assistant" if role == "user" else "user"
+
+    # Set the behavior of the bot.
+    reverse_messages.append({"role": "system", "content": "You are a helpful assistant."})
+    return list(reversed(reverse_messages))
+
+
+def chat_without_memory() -> None:
+    """Chats with GPT without external memory."""
+
+    print("Type 'quit' to exit.", file=sys.stderr)
+    conversation: List[str] = []  # Conversation history so far.
+    while True:
+        text = input(">>> ").strip()
+        if not text:
+            continue
+        if text == "quit":
+            break
+
+        conversation.append(text)
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=_make_messages(conversation),
+        )
+
+        answer = response["choices"][0]["message"]["content"]  # type: ignore
+        print(f"{answer}", file=sys.stderr)
+        conversation.append(answer)

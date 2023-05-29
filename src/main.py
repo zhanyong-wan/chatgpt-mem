@@ -94,6 +94,10 @@ def main():
         print(f"Deleted memory {mem_id}.", file=sys.stderr)
         return
 
+    if command == "chat":
+        utils.chat_without_memory()
+        return
+
     sys.exit(f"Unknown command {command}.")
 
 
