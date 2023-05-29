@@ -6,7 +6,7 @@ References:
 """
 
 from datetime import datetime
-from typing import List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 import api_secrets
 import openai
 import pinecone
@@ -91,9 +91,11 @@ def init_environment(verbose: bool = False) -> None:
 def to_embedding(text: str) -> List[float]:
     """Converts the text to its embedding vector using OpenAI API."""
 
-    embedding = openai.Embedding.create(
+    result = openai.Embedding.create(
         input=[text], model=OPENAI_TEXT_EMBEDDING_MODEL
-    )["data"][0]["embedding"]
+    )
+    data = result["data"]  # type: ignore
+    embedding = data[0]["embedding"]
     assert len(embedding) == OPENAI_GPT_EMBEDDING_DIMENSION
     return embedding
 
@@ -214,6 +216,7 @@ def query_memory(
 
     # Build a time-range filter.
     # See https://docs.pinecone.io/docs/metadata-filtering for the format of the filter.
+    filter: Optional[Dict[str, Any]] = None
     if start_time and end_time:
         filter = {
             "$and": [
@@ -229,8 +232,6 @@ def query_memory(
         filter = {"time": {"$gte": string_to_timestamp_in_microseconds(start_time)}}
     elif end_time:
         filter = {"time": {"$lt": string_to_timestamp_in_microseconds(end_time)}}
-    else:
-        filter = None
 
     result = index.query(
         namespace=PINECONE_INDEX_NAMESPACE,
