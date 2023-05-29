@@ -30,7 +30,7 @@ PINECONE_INDEX_NAMESPACE = "memories"
 PINECONE_INDEX_METADATA_KEY_MEMORY_TEXT = "memory"
 
 
-def init_environment() -> None:
+def init_environment(verbose: bool = False) -> None:
     """Initializes the environment for working with the OpenAI API and PineCone API."""
 
     # Specify the API keys.
@@ -42,10 +42,11 @@ def init_environment() -> None:
 
     # Verify that the chatgpt-mem index exists in PineCone, creating one if necessary.
     active_indexes = pinecone.list_indexes()
-    print(
-        f"Found {len(active_indexes)} active PineCone indexes: {', '.join(active_indexes)}.",
-        file=sys.stderr,
-    )
+    if verbose:
+        print(
+            f"Found {len(active_indexes)} active PineCone indexes: {', '.join(active_indexes)}.",
+            file=sys.stderr,
+        )
     if PINECONE_INDEX not in active_indexes:
         print(
             f"Didn't find the {PINECONE_INDEX} index. Creating it now (this may take several minutes).",
@@ -61,14 +62,16 @@ def init_environment() -> None:
             sys.exit(f"Failed to create the {PINECONE_INDEX} index: {e}")
         print(f"Created the {PINECONE_INDEX} index.", file=sys.stderr)
         active_indexes = pinecone.list_indexes()
-        print(
-            f"Found {len(active_indexes)} active PineCone indexes: {', '.join(active_indexes)}.",
-            file=sys.stderr,
-        )
+        if verbose:
+            print(
+                f"Found {len(active_indexes)} active PineCone indexes: {', '.join(active_indexes)}.",
+                file=sys.stderr,
+            )
         assert PINECONE_INDEX in active_indexes
-    print(f"Found the {PINECONE_INDEX} index.", file=sys.stderr)
     desc = pinecone.describe_index(PINECONE_INDEX)
-    print(f"Index description: {desc}", file=sys.stderr)
+    if verbose:
+        print(f"Found the {PINECONE_INDEX} index.", file=sys.stderr)
+        print(f"Index description: {desc}", file=sys.stderr)
 
 
 def to_embedding(text: str) -> List[float]:
