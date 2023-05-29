@@ -86,6 +86,19 @@ def to_embedding(text: str) -> List[float]:
     return embedding
 
 
+def string_to_timestamp_in_microseconds(string: str) -> int:
+    """Converts a time string to its timestamp in microseconds.
+
+    Args:
+        string: The string to convert, in the format "YYYY-MM-DD hh:mm:ss.xxxxxx".
+
+    Returns:
+        The timestamp in microseconds.
+    """
+
+    return int(datetime.strptime(string, "%Y-%m-%d %H:%M:%S.%f").timestamp() * 1e6)
+
+
 def update_memory(id: str, memory: str) -> None:
     """Upserts a memory into the PineCone index.
 
@@ -104,7 +117,11 @@ def update_memory(id: str, memory: str) -> None:
                 embedding,  # Dense vector
                 # Store the memory time and text in the vector metadata.
                 {
-                    PINECONE_INDEX_METADATA_KEY_MEMORY_TIME: id,
+                    # Store the timestamp as an integer, as PineCone doesn't support < comparison
+                    # for strings.
+                    PINECONE_INDEX_METADATA_KEY_MEMORY_TIME: string_to_timestamp_in_microseconds(
+                        id
+                    ),
                     PINECONE_INDEX_METADATA_KEY_MEMORY_TEXT: memory,
                 },
             ),
@@ -133,21 +150,48 @@ def add_memory(memory: str, utc_time: datetime = datetime.utcnow()) -> str:
     return id
 
 
-def query_memory(query: str) -> List[Tuple[str, float, str]]:
+def query_memory(
+    query: str, start_time: str = "", end_time: str = "", top_k=10
+) -> List[Tuple[str, float, str]]:
     """Queries the PineCone index for matching memories.
 
     Args:
         query: The query text.
+        start_time: The start time of the query (inclusive). Empty means infinite past.
+        end_time: The end time of the query (not inclusive). Empty means infinite future.
+        top_k: The number of matching memories to return.
 
     Returns:
-        A list of matching memory (ID, score, content), sorted by relevance (high to low).
+        A list of matching memories (ID, score, content), sorted by relevance (high to low).
     """
 
     index = pinecone.Index(PINECONE_INDEX)
+
+    # Build a time-range filter.
+    # See https://docs.pinecone.io/docs/metadata-filtering for the format of the filter.
+    if start_time and end_time:
+        filter = {
+            "$and": [
+                {
+                    "time": {"$gte": string_to_timestamp_in_microseconds(start_time)},
+                },
+                {
+                    "time": {"$lt": string_to_timestamp_in_microseconds(end_time)},
+                },
+            ]
+        }
+    elif start_time:
+        filter = {"time": {"$gte": string_to_timestamp_in_microseconds(start_time)}}
+    elif end_time:
+        filter = {"time": {"$lt": string_to_timestamp_in_microseconds(end_time)}}
+    else:
+        filter = None
+
     result = index.query(
         namespace=PINECONE_INDEX_NAMESPACE,
         vector=to_embedding(query),
-        top_k=10,
+        filter=filter,
+        top_k=top_k,
         include_values=False,
         include_metadata=True,
     )

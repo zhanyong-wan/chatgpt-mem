@@ -16,8 +16,12 @@ USAGE:
     src/main.py update <id> <text>
         Updates the memory with id <id> to <text>.
     
-    src/main.py query <query>
-        Finds the memories most relevant to <query>.
+    src/main.py query <query> [<start-time> [<end-time>]]
+        Finds the memories most relevant to <query>.  If <start-time> is given,
+        include only memories that were added at or after <start-time>.  If
+        <end-time> is given, include only memories that were added before<end-time>.
+        The time format is "YYYY-MM-DD hh:mm:ss.xxxxxx" in UTC, e.g.
+        "2021-01-01 12:34:56.123456".
 """
 
 import sys
@@ -60,8 +64,20 @@ def main():
 
     if command == "query":
         query = args[1]
-        memories = utils.query_memory(query)
-        print(f"Found {len(memories)} memories matching '{query}':", file=sys.stderr)
+        start_time = args[2] if len(args) > 2 else ""
+        end_time = args[3] if len(args) > 3 else ""
+        memories = utils.query_memory(
+            query=query, start_time=start_time, end_time=end_time
+        )
+        time_range_str = (
+            f" in time range [{start_time}..{end_time})"
+            if start_time or end_time
+            else ""
+        )
+        print(
+            f"Found {len(memories)} memories matching '{query}'{time_range_str}.",
+            file=sys.stderr,
+        )
         for mem_id, score, memory in memories:
             print(f"{mem_id} ({score}) {memory}")
         return
