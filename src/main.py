@@ -88,6 +88,14 @@ def main():
         print(f"Memory {mem_id}: {memory.text}")
         return
 
+    if command == "delete":
+        mem_id = args[1]
+        utils.delete_memories(ids=[mem_id])
+        print(f"Deleted memory {mem_id}.", file=sys.stderr)
+        return
+
+    sys.exit(f"Unknown command {command}.")
+
 
 if __name__ == "__main__":
     main()

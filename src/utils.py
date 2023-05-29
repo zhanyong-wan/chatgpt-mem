@@ -287,3 +287,14 @@ def get_memories(ids: List[str]) -> List[Memory]:
             )
         )
     return memories
+
+
+def delete_memories(ids: List[str]) -> None:
+    """Deletes the memories with the given IDs.
+
+    Args:
+        ids: The list of IDs.
+    """
+
+    index = pinecone.Index(PINECONE_INDEX)
+    index.delete(namespace=PINECONE_INDEX_NAMESPACE, ids=ids)
