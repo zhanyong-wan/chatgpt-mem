@@ -20,15 +20,24 @@ def main():
     if not args:
         sys.exit(__doc__)
 
+    utils.init_environment()
+
     command = args[0]
     if command == "init":
-        utils.init_environment()
-    elif command == "embed":
-        utils.init_environment()
+        return
+
+    if command == "embed":
         text = args[1]
         embedding = utils.to_embedding(text)
         print(f"Text: {text}")
         print(f"Embedding: {embedding}")
+        return
+    
+    if command == "add":
+        text = args[1]
+        mem_id = utils.add_memory(text)
+        print(f"Added memory '{text}' with id {mem_id}.",  file=sys.stderr)
+        return
 
 
 if __name__ == "__main__":

@@ -5,12 +5,12 @@ References:
   - Pinecone API: https://docs.pinecone.io/docs/overview
 """
 
-import api_secrets
-import pinecone
-import openai
-import sys
-
+from datetime import datetime
 from typing import List
+import api_secrets
+import openai
+import pinecone
+import sys
 
 
 # Number of dimensions in the GPT embedding space.
@@ -79,3 +79,36 @@ def to_embedding(text: str) -> List[float]:
     )["data"][0]["embedding"]
     assert len(embedding) == OPENAI_GPT_EMBEDDING_DIMENSION
     return embedding
+
+
+def add_memory(memory: str, utc_time: datetime = datetime.utcnow()) -> str:
+    """Inserts a memory into the Pinecone index.
+
+    Memories are keyed by the timestamp of the memory.
+
+    Args:
+        memory: The memory text.
+        utc_time: The UTC timestamp of the memory (defaults to now).
+
+    Returns:
+        The memory timestamp.
+    """
+
+    # Identify memories via microsecond-level timestamps.
+    # E.g. 2023-05-10 20:02:28.328142
+    id = f"{utc_time}"
+    index = pinecone.Index(PINECONE_INDEX)
+    embedding = to_embedding(memory)
+    print(f"Embedding = {embedding[:10]} + ...", file=sys.stderr)
+    index.upsert(
+        vectors=[
+            (
+                id,  # Vector ID
+                embedding,  # Dense vector
+                # Store the memory text in the vector metadata.
+                {PINECONE_INDEX_METADATA_KEY_MEMORY_TEXT: memory},
+            ),
+        ],
+        namespace=PINECONE_INDEX_NAMESPACE,
+    )
+    return id
