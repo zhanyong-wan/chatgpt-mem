@@ -81,6 +81,30 @@ def to_embedding(text: str) -> List[float]:
     return embedding
 
 
+def update_memory(id: str, memory: str) -> None:
+    """Upserts a memory into the PineCone index.
+
+    Args:
+        id: The memory ID.
+        memory: The memory text.
+    """
+
+    index = pinecone.Index(PINECONE_INDEX)
+    embedding = to_embedding(memory)
+    print(f"Embedding = {embedding[:10]} + ...", file=sys.stderr)
+    index.upsert(
+        vectors=[
+            (
+                id,  # Vector ID
+                embedding,  # Dense vector
+                # Store the memory text in the vector metadata.
+                {PINECONE_INDEX_METADATA_KEY_MEMORY_TEXT: memory},
+            ),
+        ],
+        namespace=PINECONE_INDEX_NAMESPACE,
+    )
+
+
 def add_memory(memory: str, utc_time: datetime = datetime.utcnow()) -> str:
     """Inserts a memory into the Pinecone index.
 
@@ -97,18 +121,5 @@ def add_memory(memory: str, utc_time: datetime = datetime.utcnow()) -> str:
     # Identify memories via microsecond-level timestamps.
     # E.g. 2023-05-10 20:02:28.328142
     id = f"{utc_time}"
-    index = pinecone.Index(PINECONE_INDEX)
-    embedding = to_embedding(memory)
-    print(f"Embedding = {embedding[:10]} + ...", file=sys.stderr)
-    index.upsert(
-        vectors=[
-            (
-                id,  # Vector ID
-                embedding,  # Dense vector
-                # Store the memory text in the vector metadata.
-                {PINECONE_INDEX_METADATA_KEY_MEMORY_TEXT: memory},
-            ),
-        ],
-        namespace=PINECONE_INDEX_NAMESPACE,
-    )
+    update_memory(id, memory)
     return id

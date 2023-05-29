@@ -32,11 +32,18 @@ def main():
         print(f"Text: {text}")
         print(f"Embedding: {embedding}")
         return
-    
+
     if command == "add":
         text = args[1]
         mem_id = utils.add_memory(text)
-        print(f"Added memory '{text}' with id {mem_id}.",  file=sys.stderr)
+        print(f"Added memory '{text}' with id {mem_id}.", file=sys.stderr)
+        return
+
+    if command == "update":
+        mem_id = args[1]
+        text = args[2]
+        utils.update_memory(id=mem_id, memory=text)
+        print(f"Updated memory {mem_id} with new content '{text}'.", file=sys.stderr)
         return
 
 
