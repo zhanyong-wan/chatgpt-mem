@@ -10,6 +10,8 @@ import pinecone
 import openai
 import sys
 
+from typing import List
+
 
 # Number of dimensions in the GPT embedding space.
 OPENAI_GPT_EMBEDDING_DIMENSION = 1536
@@ -67,3 +69,13 @@ def init_environment() -> None:
     print(f"Found the {PINECONE_INDEX} index.", file=sys.stderr)
     desc = pinecone.describe_index(PINECONE_INDEX)
     print(f"Index description: {desc}", file=sys.stderr)
+
+
+def to_embedding(text: str) -> List[float]:
+    """Converts the text to its embedding vector using OpenAI API."""
+
+    embedding = openai.Embedding.create(
+        input=[text], model=OPENAI_TEXT_EMBEDDING_MODEL
+    )["data"][0]["embedding"]
+    assert len(embedding) == OPENAI_GPT_EMBEDDING_DIMENSION
+    return embedding
