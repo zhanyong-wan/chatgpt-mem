@@ -318,7 +318,13 @@ def _make_messages(conversation: List[str]) -> List[Dict[str, str]]:
     # when the total length exceeds the history window size.
     reverse_messages: List[Dict[str, str]] = []
     role = "user"  # user or assistant.
+    total_len = 0
     for text in reversed(conversation):
+        # Limit the total length of text sent to the bot.
+        total_len += len(text)
+        if total_len > 2048:
+            break
+
         # In Python, it's more efficient to append to a list than to insert at the beginning.
         reverse_messages.append({"role": role, "content": text})
         # Reverse the role.
