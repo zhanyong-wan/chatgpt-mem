@@ -6,11 +6,12 @@ References:
 """
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 import api_secrets
 import openai
 import pinecone
 import sys
+from typing import Callable
 
 
 # Number of dimensions in the GPT embedding space.
@@ -209,8 +210,27 @@ def add_memory(memory: str, utc_time: Optional[datetime] = None) -> str:
     return id
 
 
+def score_by_similarity(similarity: float, memory: Memory) -> float:
+    """Computes a score based on the query's similarity to the memory.
+
+    Args:
+        similarity: The query's similarity to the memory (0-1).
+        memory: The memory.
+
+    Returns:
+        The score.
+    """
+
+    # The score is just the similarity.
+    return similarity
+
+
 def query_memory(
-    query: str, start_time: str = "", end_time: str = "", top_k=10
+    query: str,
+    start_time: str = "",
+    end_time: str = "",
+    top_k=10,
+    scorer: Callable[[float, Memory], float] = score_by_similarity,
 ) -> List[Tuple[float, Memory]]:
     """Queries the PineCone index for matching memories.
 
@@ -221,7 +241,7 @@ def query_memory(
         top_k: The number of matching memories to return.
 
     Returns:
-        A list of matching memories (score, memory), sorted by relevance score (high to low).
+        A list of matching memories (score, memory), sorted by score (high to low).
     """
 
     index = pinecone.Index(PINECONE_INDEX)
@@ -256,18 +276,18 @@ def query_memory(
     memories = []
     for item in result["matches"]:
         id = item["id"]
+        similarity = item["score"]
         metadata = item["metadata"]
+        memory = Memory(
+            id=id,
+            time=string_to_datetime(id),
+            importance=metadata.get(PINECONE_INDEX_METADATA_KEY_MEMORY_IMPORTANCE, 0),
+            text=metadata[PINECONE_INDEX_METADATA_KEY_MEMORY_TEXT],
+        )
         memories.append(
             (
-                item["score"],
-                Memory(
-                    id=id,
-                    time=string_to_datetime(id),
-                    importance=metadata.get(
-                        PINECONE_INDEX_METADATA_KEY_MEMORY_IMPORTANCE, 0
-                    ),
-                    text=metadata[PINECONE_INDEX_METADATA_KEY_MEMORY_TEXT],
-                ),
+                scorer(similarity, memory),
+                memory,
             )
         )
     return memories

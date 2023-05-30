@@ -93,9 +93,9 @@ def main():
             f"Found {len(memories)} memories matching '{query}'{time_range_str}.",
             file=sys.stderr,
         )
-        for score, memory in memories:
+        for similarity, memory in memories:
             print(
-                f"{memory.id} (score={score}, importance={memory.importance}) {memory.text}"
+                f"{memory.id} (similarity={similarity}, importance={memory.importance}) {memory.text}"
             )
         return
 
