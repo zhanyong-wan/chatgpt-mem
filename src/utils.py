@@ -30,18 +30,21 @@ PINECONE_INDEX_NAMESPACE = "memories"
 PINECONE_INDEX_METADATA_KEY_MEMORY_TIME = "time"
 # Key for storing the memory text.
 PINECONE_INDEX_METADATA_KEY_MEMORY_TEXT = "memory"
+# Key for storing the memory importance score (1-10).
+PINECONE_INDEX_METADATA_KEY_MEMORY_IMPORTANCE = "importance"
 
 
 class Memory:
     """A memory stored in the PineCone index."""
 
-    def __init__(self, id: str, time: datetime, text: str) -> None:
+    def __init__(self, id: str, time: datetime, importance: int, text: str) -> None:
         self.id = id
         self.time = time
+        self.importance = importance
         self.text = text
 
     def __repr__(self) -> str:
-        return f"Memory(id={self.id}, time={datetime_to_string(self.time)}, text={self.text})"
+        return f"Memory(id={self.id}, time={datetime_to_string(self.time)}, importance={self.importance}, text={self.text})"
 
 
 def init_environment(verbose: bool = False) -> None:
@@ -169,6 +172,9 @@ def update_memory(id: str, memory: str, verbose: bool = False) -> None:
                     PINECONE_INDEX_METADATA_KEY_MEMORY_TIME: string_to_timestamp_in_microseconds(
                         id
                     ),
+                    PINECONE_INDEX_METADATA_KEY_MEMORY_IMPORTANCE: rate_importance(
+                        memory
+                    ),
                     PINECONE_INDEX_METADATA_KEY_MEMORY_TEXT: memory,
                 },
             ),
@@ -250,13 +256,17 @@ def query_memory(
     memories = []
     for item in result["matches"]:
         id = item["id"]
+        metadata = item["metadata"]
         memories.append(
             (
                 item["score"],
                 Memory(
                     id=id,
                     time=string_to_datetime(id),
-                    text=item["metadata"][PINECONE_INDEX_METADATA_KEY_MEMORY_TEXT],
+                    importance=metadata.get(
+                        PINECONE_INDEX_METADATA_KEY_MEMORY_IMPORTANCE, 0
+                    ),
+                    text=metadata[PINECONE_INDEX_METADATA_KEY_MEMORY_TEXT],
                 ),
             )
         )
@@ -285,11 +295,15 @@ def get_memories(ids: List[str]) -> List[Memory]:
     memories = []
     for id in ids:
         item = vectors[id]
+        metadata = item["metadata"]
         memories.append(
             Memory(
                 id=id,
                 time=string_to_datetime(id),
-                text=item["metadata"][PINECONE_INDEX_METADATA_KEY_MEMORY_TEXT],
+                importance=metadata.get(
+                    PINECONE_INDEX_METADATA_KEY_MEMORY_IMPORTANCE, 0
+                ),
+                text=metadata[PINECONE_INDEX_METADATA_KEY_MEMORY_TEXT],
             )
         )
     return memories
@@ -395,9 +409,13 @@ def rate_importance(memory: str) -> int:
         A integer in the range [1, 10] where 1 is least important and 10 is most.
     """
 
-    messages = _make_messages([f"""On the scale of 1 to 10, where 1 is purely unimportant (e.g., saying hello) and 10 is extremely important and useful (e.g., saving mankind), rate the likely importance of the following piece of memory (delimited by ```). Just give me the numeric rating and nothing else.
+    messages = _make_messages(
+        [
+            f"""On the scale of 1 to 10, where 1 is purely unimportant (e.g., saying hello) and 10 is extremely important and useful (e.g., saving mankind), rate the likely importance of the following piece of memory (delimited by ```). Just give me the numeric rating and nothing else.
 Memory: ```{memory}```
-Rating: <number>"""])
+Rating: <number>"""
+        ]
+    )
     answer = _get_gpt_answer(messages, temperature=0.0)
     print(answer)
     return int(answer)

@@ -79,13 +79,15 @@ def main():
             file=sys.stderr,
         )
         for score, memory in memories:
-            print(f"{memory.id} ({score}) {memory.text}")
+            print(
+                f"{memory.id} (score={score}, importance={memory.importance}) {memory.text}"
+            )
         return
 
     if command == "get":
         mem_id = args[1]
         memory = utils.get_memories(ids=[mem_id])[0]
-        print(f"Memory {mem_id}: {memory.text}")
+        print(f"Memory {mem_id} (importance={memory.importance}): {memory.text}")
         return
 
     if command == "delete":
