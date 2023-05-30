@@ -34,6 +34,9 @@ USAGE:
 
     src/main.py rate <id>
         Rates the memory with id <id>.
+
+    src/main.py update_importance <id>...
+        Updates the importance of the memories with the given IDs.
 """
 
 import sys
@@ -116,6 +119,12 @@ def main():
         mem_id = args[1]
         rating = utils.rate_memory_by_id(mem_id)
         print(f"Rated memory {mem_id} with {rating}.", file=sys.stderr)
+        return
+
+    if command == "update_importance":
+        mem_ids = args[1:]
+        utils.update_importance(ids=mem_ids)
+        print(f"Updated importance of memory {', '.join(mem_ids)}.", file=sys.stderr)
         return
 
     sys.exit(f"Unknown command {command}.")

@@ -432,3 +432,16 @@ def rate_memory_by_id(id: str) -> int:
 
     memory = get_memories(ids=[id])[0]
     return rate_importance(memory.text)
+
+
+def update_importance(ids: List[str]) -> None:
+    """Updates the importance of the memories with the given IDs.
+
+    Args:
+        ids: The list of IDs.
+    """
+
+    for memory in get_memories(ids=ids):
+        # This will automatically re-calculate the memory importance.
+        print(f"Updating importance of memory {memory.id}...", file=sys.stderr)
+        update_memory(id=memory.id, memory=memory.text)
