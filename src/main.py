@@ -85,8 +85,12 @@ def main():
         start_time = args[2] if len(args) > 2 else ""
         end_time = args[3] if len(args) > 3 else ""
         memories = utils.query_memory(
-            query=query, start_time=start_time, end_time=end_time,
-            scorer=utils.score_by_similarity if command == "query" else utils.comprehensive_score
+            query=query,
+            start_time=start_time,
+            end_time=end_time,
+            scorer=utils.score_by_similarity
+            if command == "query"
+            else utils.comprehensive_score,
         )
         time_range_str = (
             f" in time range [{start_time}..{end_time})"

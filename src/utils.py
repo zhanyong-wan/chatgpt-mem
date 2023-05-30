@@ -5,7 +5,7 @@ References:
   - Pinecone API: https://docs.pinecone.io/docs/overview
 """
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, Callable, Dict, List, Optional, Tuple
 import api_secrets
 import openai
@@ -242,7 +242,7 @@ def comprehensive_score(similarity: float, memory: Memory) -> float:
     recency_score = pow(0.99, memory_age.total_seconds() / 3600.0)
 
     # The score is the similarity + the recency score + the normalized importance of the memory.
-    return similarity + recency_score + memory.importance/10.0
+    return similarity + recency_score + 0.3 * memory.importance / 10.0
 
 
 def query_memory(
@@ -250,7 +250,7 @@ def query_memory(
     start_time: str = "",
     end_time: str = "",
     top_k=10,
-    scorer: Callable[[float, Memory], float] = score_by_similarity,
+    scorer: Callable[[float, Memory], float] = comprehensive_score,
 ) -> List[Tuple[float, Memory]]:
     """Queries the PineCone index for matching memories.
 
@@ -310,7 +310,7 @@ def query_memory(
                 memory,
             )
         )
-    
+
     # Sort by score from high to low.
     return sorted(memories, key=lambda x: x[0], reverse=True)
 
@@ -419,6 +419,28 @@ def _get_gpt_answer(messages: List[Dict[str, str]], temperature: float = 0.7) ->
     return response["choices"][0]["message"]["content"].strip()  # type: ignore
 
 
+def _make_prompt(text: str, top_memories: List[Tuple[float, Memory]]) -> str:
+    """Makes the prompt for GPT.
+
+    Args:
+        text: The user's last message.
+        top_memories: The top memories relevant for the message.
+
+    Returns:
+        The prompt for GPT.
+    """
+
+    prompt = "Here are some memories (separated by !!!! and ended by $$$$) that might be relevant:\n"
+    for _, memory in top_memories:
+        prompt += f"""!!!!
+At {memory.time}, {memory.text}
+"""
+    prompt += f"""$$$$
+With that...
+{text}"""
+    return prompt
+
+
 def chat() -> None:
     """Chats with GPT, saving the history to external memory."""
 
@@ -431,7 +453,15 @@ def chat() -> None:
         if text == "quit":
             break
 
-        conversation.append(text)
+        # Find the 3 memories that scored highest for the current user input.
+        # Exclude memories in the last hour as they are likely to be still in
+        # the context window.
+        end_time = datetime.now() - timedelta(hours=1)
+        top_memories = query_memory(query=text, end_time=datetime_to_string(end_time))[
+            :3
+        ]
+
+        conversation.append(_make_prompt(text, top_memories))
         add_memory(f"I said: ```{text}```")
 
         answer = _get_gpt_answer(_make_messages(conversation))
