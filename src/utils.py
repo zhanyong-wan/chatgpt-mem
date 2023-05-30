@@ -345,6 +345,24 @@ def _make_messages(conversation: List[str]) -> List[Dict[str, str]]:
     return list(reversed(reverse_messages))
 
 
+def _get_gpt_answer(messages: List[Dict[str, str]], temperature: float = 0.7) -> str:
+    """Sends the list of messages to GPT and returns the answer.
+
+    Args:
+        messages: The messages to send to GPT.
+
+    Returns:
+        The GPT answer.
+    """
+
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=messages,
+        temperature=temperature,
+    )
+    return response["choices"][0]["message"]["content"].strip()  # type: ignore
+
+
 def chat() -> None:
     """Chats with GPT, saving the history to external memory."""
 
@@ -359,12 +377,41 @@ def chat() -> None:
 
         conversation.append(text)
         add_memory(f"I said: ```{text}```")
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=_make_messages(conversation),
-        )
 
-        answer = response["choices"][0]["message"]["content"].strip()  # type: ignore
+        answer = _get_gpt_answer(_make_messages(conversation))
         print(f"{answer}", file=sys.stderr)
+
         conversation.append(answer)
         add_memory(f"GPT said: ```{answer}```")
+
+
+def rate_importance(memory: str) -> int:
+    """Rates the importance of a memory by asking the GPT model.
+
+    Args:
+        memory: The memory text.
+
+    Returns:
+        A integer in the range [1, 10] where 1 is least important and 10 is most.
+    """
+
+    messages = _make_messages([f"""On the scale of 1 to 10, where 1 is purely unimportant (e.g., saying hello) and 10 is extremely important and useful (e.g., saving mankind), rate the likely importance of the following piece of memory (delimited by ```). Just give me the numeric rating and nothing else.
+Memory: ```{memory}```
+Rating: <number>"""])
+    answer = _get_gpt_answer(messages, temperature=0.0)
+    print(answer)
+    return int(answer)
+
+
+def rate_memory_by_id(id: str) -> int:
+    """Rates the importance of a memory by asking the GPT model.
+
+    Args:
+        id: The memory ID.
+
+    Returns:
+        A integer in the range [1, 10] where 1 is least important and 10 is most.
+    """
+
+    memory = get_memories(ids=[id])[0]
+    return rate_importance(memory.text)

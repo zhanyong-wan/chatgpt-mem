@@ -98,6 +98,12 @@ def main():
         utils.chat()
         return
 
+    if command == "rate":
+        mem_id = args[1]
+        rating = utils.rate_memory_by_id(mem_id)
+        print(f"Rated memory {mem_id} with {rating}.", file=sys.stderr)
+        return
+
     sys.exit(f"Unknown command {command}.")
 
 
