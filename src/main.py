@@ -22,6 +22,18 @@ USAGE:
         <end-time> is given, include only memories that were added before<end-time>.
         The time format is "YYYY-MM-DDThh:mm:ss.xxxxxx" in UTC, e.g.
         "2021-01-01T12:34:56.123456".
+
+    src/main.py get <id>
+        Prints the memory with id <id>.
+
+    src/main.py delete <id>
+        Deletes the memory with id <id>.
+
+    src/main.py chat
+        Chats with GPT, saving the conversation history to the external memory.
+
+    src/main.py rate <id>
+        Rates the memory with id <id>.
 """
 
 import sys

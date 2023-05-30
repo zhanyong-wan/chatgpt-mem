@@ -417,7 +417,6 @@ Rating: <number>"""
         ]
     )
     answer = _get_gpt_answer(messages, temperature=0.0)
-    print(answer)
     return int(answer)
 
 
