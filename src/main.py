@@ -23,6 +23,9 @@ USAGE:
         The time format is "YYYY-MM-DDThh:mm:ss.xxxxxx" in UTC, e.g.
         "2021-01-01T12:34:56.123456".
 
+    src/main.py scored_query <query> [<start-time> [<end-time>]]
+        Similar to query, but sort the memories by their score instead of similarity to query.
+
     src/main.py get <id>
         Prints the memory with id <id>.
 
@@ -77,12 +80,13 @@ def main():
         print(f"Updated memory {mem_id} with new content '{text}'.", file=sys.stderr)
         return
 
-    if command == "query":
+    if command in ("query", "scored_query"):
         query = args[1]
         start_time = args[2] if len(args) > 2 else ""
         end_time = args[3] if len(args) > 3 else ""
         memories = utils.query_memory(
-            query=query, start_time=start_time, end_time=end_time
+            query=query, start_time=start_time, end_time=end_time,
+            scorer=utils.score_by_similarity if command == "query" else utils.comprehensive_score
         )
         time_range_str = (
             f" in time range [{start_time}..{end_time})"
@@ -93,9 +97,9 @@ def main():
             f"Found {len(memories)} memories matching '{query}'{time_range_str}.",
             file=sys.stderr,
         )
-        for similarity, memory in memories:
+        for score, memory in memories:
             print(
-                f"{memory.id} (similarity={similarity}, importance={memory.importance}) {memory.text}"
+                f"{memory.id} (score={score}, importance={memory.importance}) {memory.text}"
             )
         return
 

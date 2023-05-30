@@ -211,10 +211,10 @@ def add_memory(memory: str, utc_time: Optional[datetime] = None) -> str:
 
 
 def score_by_similarity(similarity: float, memory: Memory) -> float:
-    """Computes a score based on the query's similarity to the memory.
+    """Computes a score based on the memory's similarity to the query.
 
     Args:
-        similarity: The query's similarity to the memory (0-1).
+        similarity: The memory's similarity to the query (0-1).
         memory: The memory.
 
     Returns:
@@ -223,6 +223,26 @@ def score_by_similarity(similarity: float, memory: Memory) -> float:
 
     # The score is just the similarity.
     return similarity
+
+
+def comprehensive_score(similarity: float, memory: Memory) -> float:
+    """Computes a score based on the memory's similarity to the query, its recency, and its importance.
+
+    Args:
+        similarity: The memory's similarity to the query (0-1).
+        memory: The memory.
+
+    Returns:
+        The score.
+    """
+
+    # The recency score decays exponentially (with every passing hour, the score decreases
+    # 1%).
+    memory_age = datetime.now() - memory.time
+    recency_score = pow(0.99, memory_age.total_seconds() / 3600.0)
+
+    # The score is the similarity + the recency score + the normalized importance of the memory.
+    return similarity + recency_score + memory.importance/10.0
 
 
 def query_memory(
@@ -290,7 +310,9 @@ def query_memory(
                 memory,
             )
         )
-    return memories
+    
+    # Sort by score from high to low.
+    return sorted(memories, key=lambda x: x[0], reverse=True)
 
 
 def get_memories(ids: List[str]) -> List[Memory]:
