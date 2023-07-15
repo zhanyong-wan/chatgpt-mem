@@ -249,7 +249,7 @@ def query_memory(
     query: str,
     start_time: str = "",
     end_time: str = "",
-    top_k=10,
+    top_k: int=10,
     scorer: Callable[[float, Memory], float] = comprehensive_score,
 ) -> List[Tuple[float, Memory]]:
     """Queries the PineCone index for matching memories.
@@ -259,6 +259,10 @@ def query_memory(
         start_time: The start time of the query (inclusive). Empty means infinite past.
         end_time: The end time of the query (not inclusive). Empty means infinite future.
         top_k: The number of matching memories to return.
+        scorer: The function to use to compute the score for each matching memory.
+
+    Returns:
+        A list of matching memories (score, memory), sorted by score (high to low).
 
     Returns:
         A list of matching memories (score, memory), sorted by score (high to low).
